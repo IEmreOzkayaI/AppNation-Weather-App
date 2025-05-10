@@ -1,0 +1,12 @@
+node_modules
+.git
+*.log
+Dockerfile
+docker-compose.yml
+target/
+*.jar
+*.war
+*.iml
+.idea/
+.mvn/
+*.class

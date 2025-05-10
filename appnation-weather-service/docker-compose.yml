@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: appnation-weather-service
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3001:3001'
+    restart: unless-stopped
+    environment:
+      - PORT=${PORT}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPEN_WEATHER_API_KEY=${OPEN_WEATHER_API_KEY}
+      - OPEN_WEATHER_BASE_URL=${OPEN_WEATHER_BASE_URL}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB_INDEX=${REDIS_DB_INDEX}
+    networks:
+      - appnation-network
+
+  appnation-network:
+    driver: bridge

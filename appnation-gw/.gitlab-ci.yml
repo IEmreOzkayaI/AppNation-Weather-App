@@ -1,0 +1,43 @@
+stages:
+  - check
+
+check_version:
+  stage: check
+  before_script:
+    - apk add --no-cache jq git bash libxml2-utils
+  script:
+    - |
+
+      # Fetch target branch and get changed files
+      CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+      TARGET_BRANCH="$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+
+      git fetch origin $TARGET_BRANCH
+
+      CHANGED_FILES=$(git diff --name-only origin/$TARGET_BRANCH)
+
+      # Check if only README.md is changed
+      if [[ "$CHANGED_FILES" == "README.md" ]]; then
+        echo "Only README.md changed. Skipping version check."
+        exit 0
+      fi
+
+      # Proceed with version check if other files are changed
+      CURRENT_VERSION=$(xmllint --xpath "/*[local-name()='project']/*[local-name()='version']/text()" pom.xml)
+
+      TARGET_VERSION=$(git show origin/$TARGET_BRANCH:pom.xml | xmllint --xpath "/*[local-name()='project']/*[local-name()='version']/text()" -)
+
+      echo "Current branch ($CURRENT_BRANCH) version: $CURRENT_VERSION"
+      echo "Target branch ($TARGET_BRANCH) version: $TARGET_VERSION"
+
+      if [ "$CURRENT_VERSION" == "$TARGET_VERSION" ]; then
+        echo "Versions are the same. Merge will be aborted."
+        exit 1
+      else
+        echo "Versions are different. Merge can proceed."
+        exit 0
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && ($CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "staging" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master")'
+      when: always
+    - when: never

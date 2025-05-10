@@ -1,0 +1,96 @@
+server:
+  port: ${PORT:8080}
+
+app:
+  version: "@project.version@"
+
+jwt:
+  public-key: ${JWT_PUBLIC_KEY:''}
+
+resilience4j.timelimiter:
+  instances:
+    circuit-breaker:
+      timeoutDuration: 20s
+
+spring:
+  application:
+    name: appnation-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:123456}
+      database: ${REDIS_DATABASE_APPNATION:0}
+  cloud:
+    gateway:
+      default-filters:
+        - name: CircuitBreaker
+          args:
+            name: circuit-breaker
+            fallbackUri: forward:/fallback/message
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: ${RATE_LIMITER_REPLENISH_RATE:10}
+            redis-rate-limiter.burstCapacity: ${RATE_LIMITER_BURST_CAPACITY:20}
+            key-resolver: "#{@ipKeyResolver}"
+      routes:
+        # APPNATION GW TEST ROUTE WITHOUT JWT
+        - id: http-bin
+          uri: ${HTTP_BIN_BASE_URL:http://localhost:3000}
+          predicates:
+            - Path=/http/**
+          filters:
+            - StripPrefix=1
+
+        # APPNATION GW TEST ROUTE WITH JWT
+        - id: http-bin-admin-auth
+          uri: ${HTTP_BIN_BASE_URL:http://localhost:3000}
+          predicates:
+            - Path=/admin/auth/http/**
+          filters:
+            - StripPrefix=2
+            - AdminFilter
+
+        # APPNATION GW TEST ROUTE WITH JWT
+        - id: http-bin-user-auth
+          uri: ${HTTP_BIN_BASE_URL:http://localhost:3000}
+          predicates:
+            - Path=/user/auth/http/**
+          filters:
+            - StripPrefix=2
+            - UserFilter
+
+        # APPNATION IDENTITY SERVICE GW CONFIG
+        - id: appnation-identity-public
+          uri: ${APPNATION_IDENTITY_BASE_URL:http://localhost:3000}
+          predicates:
+            - Path=/v1/user/auth/signin,/v1/admin/auth/signin,/v1/admin/auth/signup,/v1/admin/auth/refresh
+
+        - id: appnation-identity-admin
+          uri: ${APPNATION_IDENTITY_BASE_URL:http://localhost:3000}
+          predicates:
+            - Path=/v1/admin/users/**,/v1/admin/auth/signout
+          filters:
+            - AdminFilter
+
+        # APPNATION WEATHER SERVICE GW CONFIG
+        - id: appnation-weather-user
+          uri: ${APPNATION_WEATHER_BASE_URL:http://localhost:3000}
+          predicates:
+            - Path=/v1/user/weather/**
+          filters:
+            - UserFilter
+
+        - id: appnation-weather-admin
+          uri: ${APPNATION_WEATHER_BASE_URL:http://localhost:3000}
+          predicates:
+            - Path=/v1/admin/weather/**
+          filters:
+            - AdminFilter
+logging:
+  level:
+    org:
+      springframework:
+        cloud.gateway: ${APPNATION_GATEWAY_LOG_LEVEL:ERROR}
+        http.server.reactive: ${APPNATION_GATEWAY_LOG_LEVEL:ERROR}
+        web.reactive: ${APPNATION_GATEWAY_LOG_LEVEL:ERROR}
