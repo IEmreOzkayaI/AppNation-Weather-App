@@ -37,6 +37,7 @@ services:
       - ./appnation-identity-service/private.pem:/usr/app/private.pem
     networks:
       - appnation-network
+      
   appnation-weather-service:
     build:
       context: ./appnation-weather-service

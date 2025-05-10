@@ -1,0 +1,35 @@
+services:
+  api-gw:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis-server
+    environment:
+      - "REDIS_HOST=${REDIS_HOST}"
+      - "REDIS_PORT=${REDIS_PORT}"
+      - "REDIS_PASSWORD=${REDIS_PASSWORD}"
+      - "PORT=${PORT}"
+      - "REDIS_DATABASE_APPNATION=${REDIS_DATABASE_APPNATION}"
+      - "RATE_LIMITER_BURST_CAPACITY=${RATE_LIMITER_BURST_CAPACITY}"
+      - "RATE_LIMITER_REPLENISH_RATE=${RATE_LIMITER_REPLENISH_RATE}"
+      - "JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY}"
+      - "HTTP_BIN_BASE_URL=${HTTP_BIN_BASE_URL}"
+      - "APPNATION_IDENTITY_BASE_URL=${APPNATION_IDENTITY_BASE_URL}"
+      - "APPNATION_WEATHER_BASE_URL=${APPNATION_WEATHER_BASE_URL}"
+      - "APPNATION_GATEWAY_LOG_LEVEL=${APPNATION_GATEWAY_LOG_LEVEL}"
+    network_mode: "bridge"
+
+  redis-server:
+    image: "redis:alpine"
+    command: ${REDIS_HOST} --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    network_mode: "bridge"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
